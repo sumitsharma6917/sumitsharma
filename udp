@@ -1,0 +1,56 @@
+using System;
+using System.Net;
+using System.Net.Sockets;
+using System.Text;
+using System.Threading;
+/*Client*/
+namespace ConsoleApp5
+{
+    class Program
+    {
+        public static UdpClient dataSocket;
+        public static IPEndPoint ipEndPointToBind;
+        public static IPEndPoint ipEndPointToSendRecv;
+        static void Main(string[] args)
+        {
+            UdpBind("192.168.253.1", 47808);
+            SendStringCommand("OK", "192.168.253.2", 47808);
+            Thread.Sleep(2000);
+            UdpClose();
+        }
+        private static void UdpBind(string ipAddress, int UdpPort)
+        {
+            IPAddress ip = IPAddress.Parse(ipAddress);
+            ipEndPointToBind = new IPEndPoint(ip, UdpPort);
+            dataSocket = new UdpClient()
+            {
+                Client =
+                {
+                    ReceiveBufferSize = 8192,
+                    SendBufferSize = 8192,
+                    ReceiveTimeout = 10000
+
+                },
+                EnableBroadcast = true
+            };
+            dataSocket.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ExclusiveAddressUse, true);
+            dataSocket.Client.Bind(ipEndPointToBind);
+        }
+        public static void UdpClose()
+        {
+            if (dataSocket != null)
+                dataSocket.Close();
+        }
+        public static void SendStringCommand(string command,string ipAddress,int UdpPort)
+        {
+            IPAddress ip = IPAddress.Parse(ipAddress);
+            ipEndPointToSendRecv = new IPEndPoint(ip, UdpPort);
+            byte[] data = Encoding.ASCII.GetBytes(command);
+            dataSocket.Send(data, data.Length, ipEndPointToSendRecv);
+            byte[] recvData = dataSocket.Receive(ref ipEndPointToSendRecv);
+            string recv = Encoding.UTF8.GetString(recvData, 0, recvData.Length);
+            if (!recv.Equals("OK"))
+                Console.WriteLine("Ok not recieved");
+        }
+    }
+}
